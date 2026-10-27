@@ -1,0 +1,6 @@
+{
+  "name": "MoonStream",
+  "description": "Video stream extractor and player using Media3 ExoPlayer and MoonGetter architecture for HLS and MP4 streams.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

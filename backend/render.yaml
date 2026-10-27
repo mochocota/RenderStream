@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: moonstream-scraper-backend
+    env: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: free
+    region: oregon
+    envVars:
+      - key: PORT
+        value: 10000
+      - key: SCRAPER_USER_AGENT
+        value: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36
+      - key: RATE_LIMIT_MS
+        value: 1000
