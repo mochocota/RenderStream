@@ -19,6 +19,34 @@ class BackendApiClient(
 ) {
     var customBackendUrl: String = "http://10.0.2.2:8080" // IP del host en el emulador Android
 
+    /**
+     * Prueba el estado de salud del backend llamando al endpoint GET /
+     * que devuelve ApiStatusResponse (200 OK con status y endpoints).
+     */
+    suspend fun checkHealth(): Result<String> = withContext(Dispatchers.IO) {
+        val url = "$customBackendUrl/"
+        try {
+            val request = Request.Builder()
+                .url(url)
+                .addHeader("Accept", "application/json")
+                .build()
+
+            httpClient.newCall(request).execute().use { response ->
+                if (response.isSuccessful) {
+                    val body = response.body?.string() ?: ""
+                    val json = JSONObject(body)
+                    val status = json.optString("status", "online")
+                    val service = json.optString("service", "MoonStream Backend")
+                    Result.success("Conectado ($status): $service")
+                } else {
+                    Result.failure(Exception("HTTP ${response.code}: ${response.message}"))
+                }
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     suspend fun searchMovies(query: String): List<MovieItem> = withContext(Dispatchers.IO) {
         val encoded = URLEncoder.encode(query, "UTF-8")
         val url = "$customBackendUrl/search?q=$encoded"

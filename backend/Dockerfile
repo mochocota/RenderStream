@@ -1,11 +1,11 @@
 # Etapa 1: Compilación
-FROM gradle:8.10-jdk17 AS build
+FROM gradle:8.10-jdk21 AS build
 WORKDIR /home/gradle/src
 COPY . .
 RUN gradle installDist --no-daemon
 
 # Etapa 2: Imagen ligera de ejecución
-FROM eclipse-temurin:17-jre-alpine
+FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 
 COPY --from=build /home/gradle/src/build/install/moonstream-backend /app

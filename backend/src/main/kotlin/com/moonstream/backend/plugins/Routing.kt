@@ -1,5 +1,7 @@
 package com.moonstream.backend.plugins
 
+import com.moonstream.backend.models.ApiStatusResponse
+import com.moonstream.backend.models.HealthResponse
 import com.moonstream.backend.service.ScraperService
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.Application
@@ -10,23 +12,13 @@ import io.ktor.server.routing.routing
 
 fun Application.configureRouting(scraperService: ScraperService) {
     routing {
-        // Health check endpoint
+        // Health check y status endpoints con modelos @Serializable tipados
         get("/") {
-            call.respond(
-                mapOf(
-                    "status" to "online",
-                    "service" to "MoonStream Movie Scraper Backend",
-                    "version" to "1.0.0",
-                    "endpoints" to listOf(
-                        "GET /search?q={titulo}",
-                        "GET /servers?imdb={id}"
-                    )
-                )
-            )
+            call.respond(HttpStatusCode.OK, ApiStatusResponse())
         }
 
         get("/health") {
-            call.respond(HttpStatusCode.OK, mapOf("status" to "UP"))
+            call.respond(HttpStatusCode.OK, HealthResponse())
         }
 
         // Requisito 1: Endpoint GET /search?q={titulo}

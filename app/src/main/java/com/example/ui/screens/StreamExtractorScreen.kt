@@ -70,7 +70,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -397,6 +399,15 @@ fun StreamExtractorScreen(
     if (showBackendUrlDialog) {
         BackendSettingsDialog(
             currentUrl = viewModel.backendApiClient.customBackendUrl,
+            onTestConnection = { testUrl ->
+                val prev = viewModel.backendApiClient.customBackendUrl
+                viewModel.backendApiClient.customBackendUrl = testUrl
+                val result = viewModel.backendApiClient.checkHealth()
+                if (result.isFailure) {
+                    viewModel.backendApiClient.customBackendUrl = prev
+                }
+                result
+            },
             onSave = { newUrl ->
                 viewModel.backendApiClient.customBackendUrl = newUrl
                 Toast.makeText(context, "URL del backend actualizada", Toast.LENGTH_SHORT).show()
@@ -1263,10 +1274,14 @@ fun AddCustomExtractorDialog(
 @Composable
 fun BackendSettingsDialog(
     currentUrl: String,
+    onTestConnection: suspend (String) -> Result<String>,
     onSave: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
     var url by remember { mutableStateOf(currentUrl) }
+    var testResult by remember { mutableStateOf<String?>(null) }
+    var isTesting by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -1291,7 +1306,10 @@ fun BackendSettingsDialog(
                 )
                 OutlinedTextField(
                     value = url,
-                    onValueChange = { url = it },
+                    onValueChange = { 
+                        url = it 
+                        testResult = null
+                    },
                     label = { Text("URL Base del Backend") },
                     placeholder = { Text("https://tu-servicio.onrender.com") },
                     singleLine = true,
@@ -1301,6 +1319,51 @@ fun BackendSettingsDialog(
                         unfocusedTextColor = TextPrimary
                     )
                 )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    FilledTonalButton(
+                        onClick = {
+                            isTesting = true
+                            testResult = null
+                            scope.launch {
+                                val res = onTestConnection(url.trim())
+                                isTesting = false
+                                testResult = if (res.isSuccess) {
+                                    "🟢 ${res.getOrNull()}"
+                                } else {
+                                    "🔴 ${res.exceptionOrNull()?.localizedMessage ?: "Fallo al conectar"}"
+                                }
+                            }
+                        },
+                        enabled = !isTesting && url.isNotBlank(),
+                        shape = RoundedCornerShape(8.dp),
+                        colors = ButtonDefaults.filledTonalButtonColors(
+                            containerColor = DarkSurfaceCard,
+                            contentColor = NeonCyan
+                        )
+                    ) {
+                        if (isTesting) {
+                            CircularProgressIndicator(color = NeonCyan, modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Probando...", fontSize = 12.sp)
+                        } else {
+                            Text("Probar Conexión (GET /)", fontSize = 12.sp)
+                        }
+                    }
+                }
+
+                if (testResult != null) {
+                    Text(
+                        text = testResult!!,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (testResult!!.startsWith("🟢")) SuccessGreen else ErrorRed,
+                        fontSize = 12.sp
+                    )
+                }
             }
         },
         containerColor = DarkSurface,

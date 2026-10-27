@@ -44,6 +44,22 @@ data class ErrorResponse(
     val timestamp: Long = System.currentTimeMillis()
 )
 
+@Serializable
+data class ApiStatusResponse(
+    val status: String = "online",
+    val service: String = "MoonStream Movie Scraper Backend",
+    val version: String = "1.0.0",
+    val endpoints: List<String> = listOf(
+        "GET /search?q={titulo}",
+        "GET /servers?imdb={id}"
+    )
+)
+
+@Serializable
+data class HealthResponse(
+    val status: String = "UP"
+)
+
 // Excepciones tipadas de dominio
 class ResourceNotFoundException(message: String) : RuntimeException(message)
 class ExternalScraperException(message: String, cause: Throwable? = null) : RuntimeException(message, cause)
