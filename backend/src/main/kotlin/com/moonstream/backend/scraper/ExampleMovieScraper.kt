@@ -198,6 +198,18 @@ class ExampleMovieScraper(
     private fun generateDemoServers(imdbId: String): List<VideoServerInfo> {
         return listOf(
             VideoServerInfo(
+                serverName = "HLS CDN Directo (Recomendado)",
+                iframeUrl = "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
+                quality = "HLS Adaptativo (Garantizado)",
+                language = "Original"
+            ),
+            VideoServerInfo(
+                serverName = "MP4 1080p Alta Calidad",
+                iframeUrl = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4",
+                quality = "1080p MP4",
+                language = "Latino"
+            ),
+            VideoServerInfo(
                 serverName = "Streamtape",
                 iframeUrl = "https://streamtape.com/e/6D1jWwzK6YtkrPv",
                 quality = "1080p",

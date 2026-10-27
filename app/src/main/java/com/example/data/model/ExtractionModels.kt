@@ -28,6 +28,7 @@ enum class ExtractionErrorType(val userTitle: String) {
     HTTP_FORBIDDEN("Acceso denegado (HTTP 403 / Token Inválido)"),
     TIMEOUT("Tiempo de espera agotado"),
     PARSING_FAILED("Fallo al decodificar la fuente del video"),
+    VIDEO_DELETED("Video eliminado o no disponible en el servidor"),
     CAPTCHA_OR_CLOUDFLARE("Bloqueo por protección anti-bot / Cloudflare")
 }
 

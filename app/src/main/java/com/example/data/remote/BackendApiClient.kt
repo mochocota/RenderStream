@@ -178,6 +178,18 @@ class BackendApiClient(
     private fun getMockServers(imdbId: String): List<ServerOption> {
         return listOf(
             ServerOption(
+                serverName = "HLS CDN Directo (Recomendado)",
+                iframeUrl = "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
+                quality = "HLS Adaptativo (Garantizado)",
+                language = "Original"
+            ),
+            ServerOption(
+                serverName = "MP4 1080p Alta Calidad",
+                iframeUrl = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4",
+                quality = "1080p MP4",
+                language = "Latino"
+            ),
+            ServerOption(
                 serverName = "Streamtape",
                 iframeUrl = "https://streamtape.com/e/6D1jWwzK6YtkrPv",
                 quality = "1080p MP4",
@@ -201,12 +213,6 @@ class BackendApiClient(
                 iframeUrl = "https://streamwish.to/e/wz1789xy42",
                 quality = "720p HLS",
                 language = "Latino"
-            ),
-            ServerOption(
-                serverName = "Direct Stream (Big Buck Bunny)",
-                iframeUrl = "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
-                quality = "HLS Test Oficial",
-                language = "Original"
             )
         )
     }
