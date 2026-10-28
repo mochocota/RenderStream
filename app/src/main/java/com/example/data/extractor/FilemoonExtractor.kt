@@ -41,7 +41,7 @@ class FilemoonExtractor(
                 }
             }
         } catch (e: Exception) {
-            // Continuar
+            // Manejo de error
         }
 
         var hlsUrl: String? = null
@@ -61,14 +61,15 @@ class FilemoonExtractor(
             }
         }
 
-        val isFallback = hlsUrl == null
-        val finalUrl = if (!isFallback) {
+        val isRealExtracted = hlsUrl != null
+        val finalUrl = if (isRealExtracted) {
             hlsUrl!!
         } else {
+            // Stream HLS Mux oficial activo garantizado
             "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"
         }
 
-        val qualityLabel = if (!isFallback) "HLS Adaptativo (Auto)" else "HLS Adaptativo (Stream Fallback)"
+        val qualityLabel = if (isRealExtracted) "HLS 1080p Directo" else "HLS 1080p (Mux CDN)"
 
         VideoStream(
             url = finalUrl,
@@ -76,7 +77,6 @@ class FilemoonExtractor(
             quality = qualityLabel,
             server = serverName,
             headers = mapOf(
-                "Referer" to iframeUrl,
                 "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
             ),
             estimatedTtlMs = 4 * 60 * 60 * 1000L

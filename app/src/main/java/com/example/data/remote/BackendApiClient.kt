@@ -178,16 +178,22 @@ class BackendApiClient(
     private fun getMockServers(imdbId: String): List<ServerOption> {
         return listOf(
             ServerOption(
-                serverName = "HLS CDN Directo (Recomendado)",
-                iframeUrl = "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
+                serverName = "Akamai Live HLS (Ultra HD)",
+                iframeUrl = "https://cph-p2p-msl.akamaized.net/hls/live/2000341/test/master.m3u8",
                 quality = "HLS Adaptativo (Garantizado)",
                 language = "Original"
             ),
             ServerOption(
-                serverName = "MP4 1080p Alta Calidad",
-                iframeUrl = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4",
-                quality = "1080p MP4",
+                serverName = "Mux CDN (HLS 1080p)",
+                iframeUrl = "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
+                quality = "HLS 1080p",
                 language = "Latino"
+            ),
+            ServerOption(
+                serverName = "MP4 1080p Directo (Fastly)",
+                iframeUrl = "https://vjs.zencdn.net/v/oceans.mp4",
+                quality = "1080p MP4",
+                language = "Castellano"
             ),
             ServerOption(
                 serverName = "Streamtape",
@@ -206,13 +212,13 @@ class BackendApiClient(
                 serverName = "Filemoon",
                 iframeUrl = "https://filemoon.sx/e/3910abcxyz",
                 quality = "HLS 1080p",
-                language = "Castellano"
+                language = "Latino"
             ),
             ServerOption(
                 serverName = "StreamWish",
                 iframeUrl = "https://streamwish.to/e/wz1789xy42",
-                quality = "720p HLS",
-                language = "Latino"
+                quality = "720p HD",
+                language = "Subtitulado"
             )
         )
     }

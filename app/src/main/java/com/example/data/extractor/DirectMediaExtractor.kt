@@ -17,8 +17,10 @@ class DirectMediaExtractor(
         ".m3u8",
         ".mp4",
         "mux.dev",
-        "commondatastorage.googleapis.com",
+        "akamaized.net",
         "akamaihd.net",
+        "zencdn.net",
+        "w3.org",
         "cloudfront.net"
     )
 

@@ -198,41 +198,47 @@ class ExampleMovieScraper(
     private fun generateDemoServers(imdbId: String): List<VideoServerInfo> {
         return listOf(
             VideoServerInfo(
-                serverName = "HLS CDN Directo (Recomendado)",
-                iframeUrl = "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
+                serverName = "Akamai Live HLS (Ultra HD)",
+                iframeUrl = "https://cph-p2p-msl.akamaized.net/hls/live/2000341/test/master.m3u8",
                 quality = "HLS Adaptativo (Garantizado)",
                 language = "Original"
             ),
             VideoServerInfo(
-                serverName = "MP4 1080p Alta Calidad",
-                iframeUrl = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4",
-                quality = "1080p MP4",
+                serverName = "Mux CDN (HLS 1080p)",
+                iframeUrl = "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
+                quality = "HLS 1080p",
                 language = "Latino"
+            ),
+            VideoServerInfo(
+                serverName = "MP4 1080p Directo (Fastly)",
+                iframeUrl = "https://vjs.zencdn.net/v/oceans.mp4",
+                quality = "1080p MP4",
+                language = "Castellano"
             ),
             VideoServerInfo(
                 serverName = "Streamtape",
                 iframeUrl = "https://streamtape.com/e/6D1jWwzK6YtkrPv",
-                quality = "1080p",
+                quality = "1080p MP4",
                 language = "Latino",
                 headersRequired = mapOf("Referer" to "https://streamtape.com/")
             ),
             VideoServerInfo(
                 serverName = "Voe",
                 iframeUrl = "https://voe.sx/e/k10w7m84d3q2",
-                quality = "HLS 1080p",
+                quality = "HLS Adaptativo",
                 language = "Subtitulado"
             ),
             VideoServerInfo(
                 serverName = "Filemoon",
                 iframeUrl = "https://filemoon.sx/e/3910abcxyz",
-                quality = "HLS Auto",
-                language = "Castellano"
+                quality = "HLS 1080p",
+                language = "Latino"
             ),
             VideoServerInfo(
                 serverName = "StreamWish",
                 iframeUrl = "https://streamwish.to/e/wz1789xy42",
-                quality = "720p",
-                language = "Latino"
+                quality = "720p HD",
+                language = "Subtitulado"
             )
         )
     }

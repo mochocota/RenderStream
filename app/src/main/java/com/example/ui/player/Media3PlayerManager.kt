@@ -10,22 +10,21 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.exoplayer.hls.HlsMediaSource
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.source.MediaSource
-import androidx.media3.exoplayer.source.ProgressiveMediaSource
 import com.example.data.model.VideoStream
 import okhttp3.OkHttpClient
 import java.util.concurrent.TimeUnit
 
 /**
- * Gestor del reproductor Media3 / ExoPlayer.
+ * Gestor del reproductor Media3 / ExoPlayer de alta resiliencia.
  *
- * Cumple con el Requisito 4:
- * 1. Forzar MIME types: MimeTypes.APPLICATION_M3U8 para HLS, MimeTypes.VIDEO_MP4 para MP4.
- * 2. Inyectar headers requeridos (Referer, User-Agent) mediante OkHttpDataSource.Factory.
- * 3. Manejo de ciclo de vida (release).
- * 4. Manejo de errores con Player.Listener y detección de tokens expirados (HTTP 403/410).
+ * Mejoras aplicadas:
+ * 1. Usa DefaultMediaSourceFactory para auto-detectar e instanciar HLS (.m3u8), MP4, MKV o DASH
+ *    sin riesgo de excepciones por comparación estricta de cadenas de MIME types.
+ * 2. Limpieza inteligente de headers: el header 'Referer' sólo se inyecta cuando la URL del
+ *    video pertenece al dominio del host, evitando rechazos HTTP 403 en CDNs públicas.
+ * 3. Configuración robusta de timeouts y seguimiento de redirecciones en OkHttp.
  */
 @OptIn(UnstableApi::class)
 class Media3PlayerManager(
@@ -38,8 +37,8 @@ class Media3PlayerManager(
     private val httpClient: OkHttpClient = OkHttpClient.Builder()
         .followRedirects(true)
         .followSslRedirects(true)
-        .connectTimeout(15, TimeUnit.SECONDS)
-        .readTimeout(20, TimeUnit.SECONDS)
+        .connectTimeout(20, TimeUnit.SECONDS)
+        .readTimeout(25, TimeUnit.SECONDS)
         .build()
 
     fun getPlayer(): ExoPlayer {
@@ -54,7 +53,6 @@ class Media3PlayerManager(
 
         player.addListener(object : Player.Listener {
             override fun onPlayerError(error: PlaybackException) {
-                // Detección de token expirado o enlace caducado (común en servidores como Streamtape / Voe tras unas horas)
                 val isExpiredToken = error.errorCode == PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS ||
                         error.message?.contains("403") == true ||
                         error.message?.contains("410") == true ||
@@ -73,33 +71,48 @@ class Media3PlayerManager(
 
     /**
      * Prepara y reproduce el videoStream extraído.
-     * Configura el MediaSource con OkHttp DataSource para soportar headers personalizados (Referer).
      */
     fun prepareStream(stream: VideoStream, playWhenReady: Boolean = true) {
         val player = getPlayer()
 
-        // 1. Configurar DataSource con User-Agent y Headers (Referer fundamental en hosts como Streamtape)
+        // Filtrar headers para evitar que un Referer ajeno bloquee CDNs como Akamai, Mux o Cloudflare
+        val cleanHeaders = mutableMapOf<String, String>()
+        val userAgent = stream.headers["User-Agent"] ?: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+        cleanHeaders["User-Agent"] = userAgent
+
+        stream.headers["Referer"]?.let { referer ->
+            val urlLower = stream.url.lowercase()
+            // Inyectar Referer solo si el stream pertenece al dominio del host original
+            if (urlLower.contains("streamtape") || urlLower.contains("tapecontent") ||
+                urlLower.contains("voe") || urlLower.contains("filemoon") || urlLower.contains("streamwish")) {
+                cleanHeaders["Referer"] = referer
+            }
+        }
+
         val okHttpDataSourceFactory = OkHttpDataSource.Factory(httpClient)
-            .setUserAgent(stream.headers["User-Agent"] ?: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
-            .setDefaultRequestProperties(stream.headers)
+            .setUserAgent(userAgent)
+            .setDefaultRequestProperties(cleanHeaders)
 
         val dataSourceFactory = DefaultDataSource.Factory(context, okHttpDataSourceFactory)
 
-        // 2. Configurar MediaItem forzando el MIME Type exacto (Requisito 4)
+        // Resolver MIME Type canónico
+        val effectiveMime = when {
+            stream.mimeType.contains("mpegurl", ignoreCase = true) ||
+            stream.mimeType.contains("m3u8", ignoreCase = true) ||
+            stream.url.contains(".m3u8", ignoreCase = true) -> MimeTypes.APPLICATION_M3U8
+
+            stream.url.contains(".mp4", ignoreCase = true) -> MimeTypes.VIDEO_MP4
+            else -> stream.mimeType
+        }
+
         val mediaItem = MediaItem.Builder()
             .setUri(stream.url)
-            .setMimeType(stream.mimeType)
+            .setMimeType(effectiveMime)
             .build()
 
-        // 3. Crear MediaSource específico (HLS vs Progresivo/MP4)
-        val mediaSource: MediaSource = if (stream.mimeType == MimeTypes.APPLICATION_M3U8) {
-            HlsMediaSource.Factory(dataSourceFactory)
-                .setAllowChunklessPreparation(true)
-                .createMediaSource(mediaItem)
-        } else {
-            ProgressiveMediaSource.Factory(dataSourceFactory)
-                .createMediaSource(mediaItem)
-        }
+        // DefaultMediaSourceFactory delega automáticamente a HlsMediaSource o ProgressiveMediaSource
+        val mediaSourceFactory = DefaultMediaSourceFactory(dataSourceFactory)
+        val mediaSource: MediaSource = mediaSourceFactory.createMediaSource(mediaItem)
 
         player.setMediaSource(mediaSource)
         player.prepare()

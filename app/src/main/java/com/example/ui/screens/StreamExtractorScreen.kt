@@ -803,8 +803,9 @@ fun InputBar(
 @Composable
 fun PresetsRow(onSelectPreset: (String) -> Unit) {
     val presets = listOf(
-        "HLS Big Buck Bunny" to "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
-        "MP4 Tears of Steel" to "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4",
+        "Akamai Live HLS" to "https://cph-p2p-msl.akamaized.net/hls/live/2000341/test/master.m3u8",
+        "Mux HLS 1080p" to "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
+        "MP4 1080p (Fastly)" to "https://vjs.zencdn.net/v/oceans.mp4",
         "Streamtape Demo" to "https://streamtape.com/e/6D1jWwzK6YtkrPv",
         "Voe Embed Demo" to "https://voe.sx/e/k10w7m84d3q2",
         "Filemoon Demo" to "https://filemoon.sx/e/3910abcxyz"
