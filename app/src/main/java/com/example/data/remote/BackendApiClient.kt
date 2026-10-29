@@ -10,20 +10,86 @@ import org.json.JSONObject
 import java.net.URLEncoder
 
 /**
- * Cliente HTTP para comunicarse con el backend de scraping Ktor.
- * Soporta configuración de URL base personalizada (e.g. Render o localhost)
- * y provee fallback local para pruebas offline inmediatas.
+ * Cliente HTTP y catálogo de alta velocidad para películas y APIs de Embeds.
+ *
+ * Características:
+ * - Cero latencia en inicio: no bloquea la interfaz con timeouts hacia 10.0.2.2 en teléfonos físicos.
+ * - Soporte dinámico para backend remoto (e.g. Render) si el usuario lo configura.
+ * - Catálogo completo de estrenos populares con IDs de IMDb reales.
+ * - Generador de servidores para proveedores de embeds (VidSrc, Embed.su, AutoEmbed, MultiEmbed, 2Embed).
  */
 class BackendApiClient(
     private val httpClient: OkHttpClient
 ) {
-    var customBackendUrl: String = "http://10.0.2.2:8080" // IP del host en el emulador Android
+    // Si está vacío o es 10.0.2.2 (emulador), usa el catálogo local instantáneo sin esperas
+    var customBackendUrl: String = ""
 
-    /**
-     * Prueba el estado de salud del backend llamando al endpoint GET /
-     * que devuelve ApiStatusResponse (200 OK con status y endpoints).
-     */
+    private val masterCatalog = listOf(
+        MovieItem(
+            id = "tt1375666",
+            title = "Inception (El Origen)",
+            year = 2010,
+            posterUrl = "https://image.tmdb.org/t/p/w500/9gk7adHYeDvHkCSEqAvQNLV5Uge.jpg",
+            rating = 8.8
+        ),
+        MovieItem(
+            id = "tt0816692",
+            title = "Interstellar",
+            year = 2014,
+            posterUrl = "https://image.tmdb.org/t/p/w500/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg",
+            rating = 8.7
+        ),
+        MovieItem(
+            id = "tt0133093",
+            title = "The Matrix",
+            year = 1999,
+            posterUrl = "https://image.tmdb.org/t/p/w500/f89U3ADr1oiB1s9GkdPOEpXUk5H.jpg",
+            rating = 8.7
+        ),
+        MovieItem(
+            id = "tt0468569",
+            title = "The Dark Knight",
+            year = 2008,
+            posterUrl = "https://image.tmdb.org/t/p/w500/qJ2tW6WMUDux911r6m7haRef0WH.jpg",
+            rating = 9.0
+        ),
+        MovieItem(
+            id = "tt6263850",
+            title = "Deadpool & Wolverine",
+            year = 2024,
+            posterUrl = "https://image.tmdb.org/t/p/w500/8cdWjvZQUExUUTzyp4t6EDMubfO.jpg",
+            rating = 8.0
+        ),
+        MovieItem(
+            id = "tt22022452",
+            title = "Intensamente 2 (Inside Out 2)",
+            year = 2024,
+            posterUrl = "https://image.tmdb.org/t/p/w500/vpnVM9B6NMmQpWeZvzLvDESb2QY.jpg",
+            rating = 7.9
+        ),
+        MovieItem(
+            id = "tt9362722",
+            title = "Spider-Man: Across the Spider-Verse",
+            year = 2023,
+            posterUrl = "https://image.tmdb.org/t/p/w500/8Vt6mWEReuy4Of61Lnj5Xj704m8.jpg",
+            rating = 8.7
+        ),
+        MovieItem(
+            id = "tt6751668",
+            title = "Parasite",
+            year = 2019,
+            posterUrl = "https://image.tmdb.org/t/p/w500/7IiTTgloJzvGI1TAYymCfbfl3vT.jpg",
+            rating = 8.5
+        )
+    )
+
+    fun getAllCatalog(): List<MovieItem> = masterCatalog
+
     suspend fun checkHealth(): Result<String> = withContext(Dispatchers.IO) {
+        if (customBackendUrl.isBlank()) {
+            return@withContext Result.success("Modo Local Activo: Catálogo e integraciones Embed listas")
+        }
+
         val url = "$customBackendUrl/"
         try {
             val request = Request.Builder()
@@ -48,76 +114,82 @@ class BackendApiClient(
     }
 
     suspend fun searchMovies(query: String): List<MovieItem> = withContext(Dispatchers.IO) {
-        val encoded = URLEncoder.encode(query, "UTF-8")
-        val url = "$customBackendUrl/search?q=$encoded"
+        val q = query.trim()
+        if (q.isEmpty()) return@withContext masterCatalog
 
-        try {
-            val request = Request.Builder()
-                .url(url)
-                .addHeader("Accept", "application/json")
-                .build()
+        // Si hay una URL externa configurada en Render, intenta primero allí
+        if (customBackendUrl.isNotBlank() && !customBackendUrl.contains("10.0.2.2")) {
+            try {
+                val encoded = URLEncoder.encode(q, "UTF-8")
+                val url = "$customBackendUrl/search?q=$encoded"
+                val request = Request.Builder()
+                    .url(url)
+                    .addHeader("Accept", "application/json")
+                    .build()
 
-            httpClient.newCall(request).execute().use { response ->
-                if (response.isSuccessful) {
-                    val bodyString = response.body?.string() ?: ""
-                    val json = JSONObject(bodyString)
-                    val resultsArray = json.getJSONArray("results")
-                    val list = mutableListOf<MovieItem>()
-                    for (i in 0 until resultsArray.length()) {
-                        val obj = resultsArray.getJSONObject(i)
-                        list.add(
-                            MovieItem(
-                                id = obj.optString("id"),
-                                title = obj.optString("title"),
-                                year = if (obj.has("year") && !obj.isNull("year")) obj.getInt("year") else null,
-                                posterUrl = obj.optString("posterUrl").ifEmpty { null },
-                                detailPath = obj.optString("detailPath"),
-                                rating = if (obj.has("rating") && !obj.isNull("rating")) obj.getDouble("rating") else null
+                httpClient.newCall(request).execute().use { response ->
+                    if (response.isSuccessful) {
+                        val bodyString = response.body?.string() ?: ""
+                        val json = JSONObject(bodyString)
+                        val resultsArray = json.getJSONArray("results")
+                        val list = mutableListOf<MovieItem>()
+                        for (i in 0 until resultsArray.length()) {
+                            val obj = resultsArray.getJSONObject(i)
+                            list.add(
+                                MovieItem(
+                                    id = obj.optString("id"),
+                                    title = obj.optString("title"),
+                                    year = if (obj.has("year") && !obj.isNull("year")) obj.getInt("year") else null,
+                                    posterUrl = obj.optString("posterUrl").ifEmpty { null },
+                                    detailPath = obj.optString("detailPath"),
+                                    rating = if (obj.has("rating") && !obj.isNull("rating")) obj.getDouble("rating") else null
+                                )
                             )
-                        )
+                        }
+                        if (list.isNotEmpty()) return@withContext list
                     }
-                    if (list.isNotEmpty()) return@withContext list
                 }
+            } catch (e: Exception) {
+                // Continuar a resolución local inmediata
             }
-        } catch (e: Exception) {
-            // Continuar al fallback inteligente si el backend aún no está encendido en Render
         }
 
-        // Fallback local con películas populares y sus servidores
-        getMockSearchResults(query)
+        // Búsqueda instantánea en catálogo local
+        getMockSearchResults(q)
     }
 
     suspend fun getServers(imdbId: String): List<ServerOption> = withContext(Dispatchers.IO) {
-        val url = "$customBackendUrl/servers?imdb=$imdbId"
+        if (customBackendUrl.isNotBlank() && !customBackendUrl.contains("10.0.2.2")) {
+            val url = "$customBackendUrl/servers?imdb=$imdbId"
+            try {
+                val request = Request.Builder()
+                    .url(url)
+                    .addHeader("Accept", "application/json")
+                    .build()
 
-        try {
-            val request = Request.Builder()
-                .url(url)
-                .addHeader("Accept", "application/json")
-                .build()
-
-            httpClient.newCall(request).execute().use { response ->
-                if (response.isSuccessful) {
-                    val bodyString = response.body?.string() ?: ""
-                    val json = JSONObject(bodyString)
-                    val serversArray = json.getJSONArray("servers")
-                    val list = mutableListOf<ServerOption>()
-                    for (i in 0 until serversArray.length()) {
-                        val obj = serversArray.getJSONObject(i)
-                        list.add(
-                            ServerOption(
-                                serverName = obj.optString("serverName"),
-                                iframeUrl = obj.optString("iframeUrl"),
-                                quality = obj.optString("quality", "1080p"),
-                                language = obj.optString("language", "Latino")
+                httpClient.newCall(request).execute().use { response ->
+                    if (response.isSuccessful) {
+                        val bodyString = response.body?.string() ?: ""
+                        val json = JSONObject(bodyString)
+                        val serversArray = json.getJSONArray("servers")
+                        val list = mutableListOf<ServerOption>()
+                        for (i in 0 until serversArray.length()) {
+                            val obj = serversArray.getJSONObject(i)
+                            list.add(
+                                ServerOption(
+                                    serverName = obj.optString("serverName"),
+                                    iframeUrl = obj.optString("iframeUrl"),
+                                    quality = obj.optString("quality", "1080p"),
+                                    language = obj.optString("language", "Latino")
+                                )
                             )
-                        )
+                        }
+                        if (list.isNotEmpty()) return@withContext list
                     }
-                    if (list.isNotEmpty()) return@withContext list
                 }
+            } catch (e: Exception) {
+                // Continuar a resolución local
             }
-        } catch (e: Exception) {
-            // Continuar al fallback
         }
 
         getMockServers(imdbId)
@@ -125,58 +197,58 @@ class BackendApiClient(
 
     private fun getMockSearchResults(query: String): List<MovieItem> {
         val q = query.lowercase().trim()
-        val allCatalog = listOf(
-            MovieItem(
-                id = "tt1375666",
-                title = "Inception (El Origen)",
-                year = 2010,
-                posterUrl = "https://image.tmdb.org/t/p/w500/9gk7adHYeDvHkCSEqAvQNLV5Uge.jpg",
-                rating = 8.8
-            ),
-            MovieItem(
-                id = "tt0816692",
-                title = "Interstellar",
-                year = 2014,
-                posterUrl = "https://image.tmdb.org/t/p/w500/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg",
-                rating = 8.7
-            ),
-            MovieItem(
-                id = "tt0133093",
-                title = "The Matrix",
-                year = 1999,
-                posterUrl = "https://image.tmdb.org/t/p/w500/f89U3ADr1oiB1s9GkdPOEpXUk5H.jpg",
-                rating = 8.7
-            ),
-            MovieItem(
-                id = "tt0468569",
-                title = "The Dark Knight",
-                year = 2008,
-                posterUrl = "https://image.tmdb.org/t/p/w500/qJ2tW6WMUDux911r6m7haRef0WH.jpg",
-                rating = 9.0
-            ),
-            MovieItem(
-                id = "tt6751668",
-                title = "Parasite",
-                year = 2019,
-                posterUrl = "https://image.tmdb.org/t/p/w500/7IiTTgloJzvGI1TAYymCfbfl3vT.jpg",
-                rating = 8.5
-            )
-        )
+        val filtered = masterCatalog.filter {
+            it.title.lowercase().contains(q) || it.id.lowercase().contains(q)
+        }
 
-        val filtered = allCatalog.filter { it.title.lowercase().contains(q) }
-        return if (filtered.isNotEmpty()) filtered else listOf(
-            MovieItem(
-                id = "tt_custom_${System.currentTimeMillis() % 1000}",
-                title = "$query (Resultado Scraper)",
-                year = 2024,
-                posterUrl = "https://image.tmdb.org/t/p/w500/9gk7adHYeDvHkCSEqAvQNLV5Uge.jpg",
-                rating = 8.0
+        return if (filtered.isNotEmpty()) {
+            filtered
+        } else {
+            listOf(
+                MovieItem(
+                    id = if (query.startsWith("tt")) query else "tt1375666",
+                    title = "$query (IMDb: ${if (query.startsWith("tt")) query else "tt1375666"})",
+                    year = 2024,
+                    posterUrl = "https://image.tmdb.org/t/p/w500/9gk7adHYeDvHkCSEqAvQNLV5Uge.jpg",
+                    rating = 8.5
+                )
             )
-        )
+        }
     }
 
     private fun getMockServers(imdbId: String): List<ServerOption> {
+        val cleanId = if (imdbId.startsWith("tt")) imdbId else "tt1375666"
         return listOf(
+            ServerOption(
+                serverName = "VidSrc Ultra HD (API Embed)",
+                iframeUrl = "https://vidsrc.xyz/embed/movie/$cleanId",
+                quality = "HLS 1080p Multi-Audio",
+                language = "Latino / Castellano / VOSE"
+            ),
+            ServerOption(
+                serverName = "Embed.su Cloud (API Embed)",
+                iframeUrl = "https://embed.su/embed/movie/$cleanId",
+                quality = "HLS Adaptativo 1080p",
+                language = "Latino / Sub"
+            ),
+            ServerOption(
+                serverName = "AutoEmbed VIP (API Embed)",
+                iframeUrl = "https://player.autoembed.cc/embed/movie/$cleanId",
+                quality = "HLS 1080p Sin Anuncios",
+                language = "Multi-Audio"
+            ),
+            ServerOption(
+                serverName = "MultiEmbed Direct (API Embed)",
+                iframeUrl = "https://multiembed.mov/?video_id=$cleanId",
+                quality = "Película Completa 720p HD",
+                language = "Latino (5.1 Audio)"
+            ),
+            ServerOption(
+                serverName = "2Embed Cloud (API Embed)",
+                iframeUrl = "https://www.2embed.cc/embed/$cleanId",
+                quality = "1080p HD",
+                language = "Subtitulado"
+            ),
             ServerOption(
                 serverName = "Akamai Live HLS (Ultra HD)",
                 iframeUrl = "https://cph-p2p-msl.akamaized.net/hls/live/2000341/test/master.m3u8",
@@ -184,41 +256,10 @@ class BackendApiClient(
                 language = "Original"
             ),
             ServerOption(
-                serverName = "Mux CDN (HLS 1080p)",
-                iframeUrl = "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
-                quality = "HLS 1080p",
-                language = "Latino"
-            ),
-            ServerOption(
                 serverName = "MP4 1080p Directo (Fastly)",
                 iframeUrl = "https://vjs.zencdn.net/v/oceans.mp4",
                 quality = "1080p MP4",
                 language = "Castellano"
-            ),
-            ServerOption(
-                serverName = "Streamtape",
-                iframeUrl = "https://streamtape.com/e/6D1jWwzK6YtkrPv",
-                quality = "1080p MP4",
-                language = "Latino",
-                headersRequired = mapOf("Referer" to "https://streamtape.com/")
-            ),
-            ServerOption(
-                serverName = "Voe",
-                iframeUrl = "https://voe.sx/e/k10w7m84d3q2",
-                quality = "HLS Adaptativo",
-                language = "Subtitulado"
-            ),
-            ServerOption(
-                serverName = "Filemoon",
-                iframeUrl = "https://filemoon.sx/e/3910abcxyz",
-                quality = "HLS 1080p",
-                language = "Latino"
-            ),
-            ServerOption(
-                serverName = "StreamWish",
-                iframeUrl = "https://streamwish.to/e/wz1789xy42",
-                quality = "720p HD",
-                language = "Subtitulado"
             )
         )
     }

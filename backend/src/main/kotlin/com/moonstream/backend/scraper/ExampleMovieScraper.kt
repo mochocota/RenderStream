@@ -196,7 +196,44 @@ class ExampleMovieScraper(
     }
 
     private fun generateDemoServers(imdbId: String): List<VideoServerInfo> {
+        val cleanId = if (imdbId.startsWith("tt")) imdbId else "tt1375666"
         return listOf(
+            VideoServerInfo(
+                serverName = "VidSrc Ultra HD (API Embed)",
+                iframeUrl = "https://vidsrc.xyz/embed/movie/$cleanId",
+                quality = "HLS 1080p Multi-Audio",
+                language = "Latino / Castellano / VOSE"
+            ),
+            VideoServerInfo(
+                serverName = "Embed.su Cloud (API Embed)",
+                iframeUrl = "https://embed.su/embed/movie/$cleanId",
+                quality = "HLS Adaptativo 1080p",
+                language = "Latino / Sub"
+            ),
+            VideoServerInfo(
+                serverName = "AutoEmbed VIP (API Embed)",
+                iframeUrl = "https://player.autoembed.cc/embed/movie/$cleanId",
+                quality = "HLS 1080p Sin Anuncios",
+                language = "Multi-Audio"
+            ),
+            VideoServerInfo(
+                serverName = "MultiEmbed Direct (API Embed)",
+                iframeUrl = "https://multiembed.mov/?video_id=$cleanId",
+                quality = "Película Completa 720p HD",
+                language = "Latino (5.1 Audio)"
+            ),
+            VideoServerInfo(
+                serverName = "2Embed Cloud (API Embed)",
+                iframeUrl = "https://www.2embed.cc/embed/$cleanId",
+                quality = "1080p HD",
+                language = "Subtitulado"
+            ),
+            VideoServerInfo(
+                serverName = "SmashyStream (API Embed)",
+                iframeUrl = "https://player.smashystream.com/movie/$cleanId",
+                quality = "Full HD",
+                language = "Inglés / Sub"
+            ),
             VideoServerInfo(
                 serverName = "Akamai Live HLS (Ultra HD)",
                 iframeUrl = "https://cph-p2p-msl.akamaized.net/hls/live/2000341/test/master.m3u8",
@@ -204,41 +241,10 @@ class ExampleMovieScraper(
                 language = "Original"
             ),
             VideoServerInfo(
-                serverName = "Mux CDN (HLS 1080p)",
-                iframeUrl = "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
-                quality = "HLS 1080p",
-                language = "Latino"
-            ),
-            VideoServerInfo(
                 serverName = "MP4 1080p Directo (Fastly)",
                 iframeUrl = "https://vjs.zencdn.net/v/oceans.mp4",
                 quality = "1080p MP4",
                 language = "Castellano"
-            ),
-            VideoServerInfo(
-                serverName = "Streamtape",
-                iframeUrl = "https://streamtape.com/e/6D1jWwzK6YtkrPv",
-                quality = "1080p MP4",
-                language = "Latino",
-                headersRequired = mapOf("Referer" to "https://streamtape.com/")
-            ),
-            VideoServerInfo(
-                serverName = "Voe",
-                iframeUrl = "https://voe.sx/e/k10w7m84d3q2",
-                quality = "HLS Adaptativo",
-                language = "Subtitulado"
-            ),
-            VideoServerInfo(
-                serverName = "Filemoon",
-                iframeUrl = "https://filemoon.sx/e/3910abcxyz",
-                quality = "HLS 1080p",
-                language = "Latino"
-            ),
-            VideoServerInfo(
-                serverName = "StreamWish",
-                iframeUrl = "https://streamwish.to/e/wz1789xy42",
-                quality = "720p HD",
-                language = "Subtitulado"
             )
         )
     }

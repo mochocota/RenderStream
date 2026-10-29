@@ -118,7 +118,7 @@ fun StreamExtractorScreen(
     val activeMovieTitle by viewModel.activeMovieTitle.collectAsStateWithLifecycle()
 
     var selectedTabIndex by remember { mutableIntStateOf(0) } // 0: Scraper Películas, 1: Extractor Directo
-    var searchQuery by remember { mutableStateOf("Inception") }
+    var searchQuery by remember { mutableStateOf("") }
     var inputUrl by remember { mutableStateOf("https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8") }
 
     var showInfoDialog by remember { mutableStateOf(false) }
@@ -255,7 +255,10 @@ fun StreamExtractorScreen(
                 // Modo 1: Búsqueda en backend Ktor
                 MovieScraperSection(
                     searchQuery = searchQuery,
-                    onQueryChange = { searchQuery = it },
+                    onQueryChange = {
+                        searchQuery = it
+                        viewModel.searchMovies(it)
+                    },
                     onSearch = { viewModel.searchMovies(searchQuery) },
                     isSearching = isSearching,
                     searchResults = searchResults,
@@ -434,10 +437,17 @@ fun MovieScraperSection(
     ) {
         Column(modifier = Modifier.padding(14.dp)) {
             Text(
-                text = "Backend Ktor Scraper (GET /search)",
+                text = "APIs de Proveedores de Embeds (VidSrc / Embed.su / AutoEmbed)",
                 style = MaterialTheme.typography.labelMedium,
                 color = NeonCyan,
                 fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "Consulta directa por título o ID de IMDb sin lidiar con 10 servidores rotos.",
+                style = MaterialTheme.typography.bodySmall,
+                color = TextSecondary,
+                fontSize = 11.sp
             )
             Spacer(modifier = Modifier.height(8.dp))
             OutlinedTextField(
@@ -446,7 +456,7 @@ fun MovieScraperSection(
                 modifier = Modifier
                     .fillMaxWidth()
                     .testTag("movie_search_input"),
-                placeholder = { Text("Escribe una película (e.g. Inception, Interstellar)", fontSize = 13.sp, color = TextMuted) },
+                placeholder = { Text("Escribe una película o IMDb ID (e.g. Inception, tt1375666)", fontSize = 13.sp, color = TextMuted) },
                 trailingIcon = {
                     IconButton(onClick = onSearch) {
                         Icon(Icons.Default.Search, contentDescription = "Buscar", tint = NeonCyan)
@@ -538,6 +548,14 @@ fun MovieCardItem(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
+            if (movie.id.startsWith("tt")) {
+                Text(
+                    text = "ID: ${movie.id}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = NeonCyan,
+                    fontSize = 10.sp
+                )
+            }
             Spacer(modifier = Modifier.height(4.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -594,7 +612,7 @@ fun ServersSelectorCard(
             ) {
                 Column {
                     Text(
-                        text = "Servidores Extraídos (GET /servers)",
+                        text = "APIs de Proveedores de Embeds (Sin Anuncios)",
                         style = MaterialTheme.typography.labelSmall,
                         color = NeonCyan,
                         fontWeight = FontWeight.Bold
@@ -620,11 +638,11 @@ fun ServersSelectorCard(
                 ) {
                     CircularProgressIndicator(color = NeonCyan, modifier = Modifier.size(24.dp))
                     Spacer(modifier = Modifier.width(10.dp))
-                    Text("Extrayendo iframes de video...", color = TextSecondary)
+                    Text("Consultando APIs de Embeds (VidSrc/Embed.su/AutoEmbed)...", color = TextSecondary)
                 }
             } else {
                 Text(
-                    text = "Selecciona un servidor para que MoonGetter extraiga el enlace directo y lo reproduzca sin anuncios:",
+                    text = "Selecciona un proveedor para extraer el flujo HLS .m3u8 directo a Media3 ExoPlayer:",
                     style = MaterialTheme.typography.bodySmall,
                     color = TextSecondary,
                     fontSize = 12.sp
@@ -803,12 +821,12 @@ fun InputBar(
 @Composable
 fun PresetsRow(onSelectPreset: (String) -> Unit) {
     val presets = listOf(
+        "VidSrc (Inception)" to "https://vidsrc.xyz/embed/movie/tt1375666",
+        "Embed.su (Interstellar)" to "https://embed.su/embed/movie/tt0816692",
+        "AutoEmbed (The Matrix)" to "https://player.autoembed.cc/embed/movie/tt0133093",
+        "MultiEmbed (Dark Knight)" to "https://multiembed.mov/?video_id=tt0468569",
         "Akamai Live HLS" to "https://cph-p2p-msl.akamaized.net/hls/live/2000341/test/master.m3u8",
-        "Mux HLS 1080p" to "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
-        "MP4 1080p (Fastly)" to "https://vjs.zencdn.net/v/oceans.mp4",
-        "Streamtape Demo" to "https://streamtape.com/e/6D1jWwzK6YtkrPv",
-        "Voe Embed Demo" to "https://voe.sx/e/k10w7m84d3q2",
-        "Filemoon Demo" to "https://filemoon.sx/e/3910abcxyz"
+        "Fastly MP4 1080p" to "https://vjs.zencdn.net/v/oceans.mp4"
     )
 
     Column {

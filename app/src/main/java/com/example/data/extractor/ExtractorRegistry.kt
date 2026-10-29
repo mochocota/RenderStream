@@ -18,6 +18,7 @@ class ExtractorRegistry(
 
     init {
         // Registrar extractores integrados por defecto
+        register(EmbedProviderExtractor(httpClient, mimeTypeDetector))
         register(StreamtapeExtractor(httpClient))
         register(VoeExtractor(httpClient))
         register(FilemoonExtractor(httpClient))

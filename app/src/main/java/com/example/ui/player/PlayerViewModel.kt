@@ -96,16 +96,20 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     private var lastSourceIframeUrl: String = ""
 
     init {
-        // Carga inicial de catálogo popular para demostración inmediata
-        searchMovies("Inception")
+        // Carga inicial inmediata de todo el catálogo para visualización instantánea al abrir la app
+        _searchResults.value = backendApiClient.getAllCatalog()
     }
 
     /**
-     * Busca películas a través del endpoint GET /search?q={query} del backend Ktor.
+     * Busca películas a través del endpoint GET /search?q={query} del backend Ktor
+     * o en el catálogo local integrado.
      */
     fun searchMovies(query: String) {
         val trimmed = query.trim()
-        if (trimmed.isEmpty()) return
+        if (trimmed.isEmpty()) {
+            _searchResults.value = backendApiClient.getAllCatalog()
+            return
+        }
 
         _isSearching.value = true
         viewModelScope.launch {
@@ -113,7 +117,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                 val results = backendApiClient.searchMovies(trimmed)
                 _searchResults.value = results
             } catch (e: Exception) {
-                _searchResults.value = emptyList()
+                _searchResults.value = backendApiClient.getAllCatalog()
             } finally {
                 _isSearching.value = false
             }
